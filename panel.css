@@ -1,0 +1,400 @@
+/* ========== 浮动面板样式 ========== */
+
+#qp-panel-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 360px;
+  z-index: 2147483647;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  box-shadow: -4px 0 20px rgba(0,0,0,0.12);
+  background: #f7f8fa;
+  flex-direction: column;
+  font-size: 13px;
+  color: #333;
+  transition: transform 0.2s ease;
+  transform: translateX(100%);
+}
+
+#qp-panel-overlay.qp-show {
+  display: flex;
+  transform: translateX(0);
+}
+
+#qp-panel-overlay * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* 顶栏 */
+#qp-panel-overlay .qp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: #fff;
+  border-bottom: 1px solid #e8e8e8;
+  flex-shrink: 0;
+}
+
+#qp-panel-overlay .qp-header h2 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+#qp-panel-overlay .qp-header-actions {
+  display: flex;
+  gap: 6px;
+}
+
+#qp-panel-overlay .qp-btn-icon {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: #f0f0f0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+}
+
+#qp-panel-overlay .qp-btn-icon:hover {
+  background: #e0e0e0;
+}
+
+/* 搜索 */
+#qp-panel-overlay .qp-search {
+  padding: 8px 14px;
+  background: #fff;
+  border-bottom: 1px solid #e8e8e8;
+  flex-shrink: 0;
+}
+
+#qp-panel-overlay .qp-search input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  font-family: inherit;
+}
+
+#qp-panel-overlay .qp-search input:focus {
+  border-color: #4a90d9;
+}
+
+/* 内容区 */
+#qp-panel-overlay .qp-body {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 8px;
+}
+
+/* 分组 */
+#qp-panel-overlay .qp-group {
+  margin: 6px 0;
+}
+
+#qp-panel-overlay .qp-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+
+#qp-panel-overlay .qp-group-header:hover {
+  background: #eee;
+}
+
+#qp-panel-overlay .qp-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  letter-spacing: 0.3px;
+}
+
+#qp-panel-overlay .qp-group-toggle {
+  font-size: 10px;
+  color: #ccc;
+  margin-right: 6px;
+  display: inline-block;
+  transition: transform 0.15s;
+}
+
+#qp-panel-overlay .qp-group.collapsed .qp-group-toggle {
+  transform: rotate(-90deg);
+}
+
+#qp-panel-overlay .qp-group.collapsed .qp-phrase-list {
+  display: none;
+}
+
+#qp-panel-overlay .qp-group-actions {
+  display: flex;
+  gap: 3px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+#qp-panel-overlay .qp-group-header:hover .qp-group-actions {
+  opacity: 1;
+}
+
+#qp-panel-overlay .qp-btn-tiny {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  line-height: 1;
+}
+
+#qp-panel-overlay .qp-btn-tiny:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+/* 短语项 */
+#qp-panel-overlay .qp-phrase-list {
+  padding: 0 8px 2px;
+}
+
+#qp-panel-overlay .qp-phrase-item {
+  display: flex;
+  align-items: center;
+  padding: 7px 10px;
+  margin: 2px 0;
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.12s;
+}
+
+#qp-panel-overlay .qp-phrase-item:hover {
+  border-color: #4a90d9;
+  box-shadow: 0 1px 4px rgba(74,144,217,0.15);
+}
+
+#qp-panel-overlay .qp-phrase-item:active {
+  transform: scale(0.98);
+}
+
+#qp-panel-overlay .qp-phrase-text {
+  flex: 1;
+  font-size: 13px;
+  color: #333;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+#qp-panel-overlay .qp-phrase-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+#qp-panel-overlay .qp-phrase-item:hover .qp-phrase-actions {
+  opacity: 1;
+}
+
+/* 标签 badge */
+#qp-panel-overlay .qp-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  margin-right: 2px;
+  vertical-align: middle;
+}
+
+/* Toast */
+#qp-toast {
+  position: fixed;
+  bottom: 20px;
+  right: 200px;
+  transform: translateY(50px);
+  background: #333;
+  color: #fff;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  opacity: 0;
+  transition: all 0.25s ease;
+  pointer-events: none;
+  z-index: 2147483647;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+#qp-toast.qp-toast-show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 模态框 */
+#qp-panel-overlay .qp-modal-bg {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.25);
+  z-index: 10;
+  align-items: center;
+  justify-content: center;
+}
+
+#qp-panel-overlay .qp-modal-bg.qp-modal-show {
+  display: flex;
+}
+
+#qp-panel-overlay .qp-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px;
+  width: 310px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+#qp-panel-overlay .qp-modal h3 {
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+#qp-panel-overlay .qp-modal label {
+  display: block;
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 3px;
+  margin-top: 8px;
+}
+
+#qp-panel-overlay .qp-modal input,
+#qp-panel-overlay .qp-modal textarea,
+#qp-panel-overlay .qp-modal select {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+
+#qp-panel-overlay .qp-modal textarea {
+  height: 70px;
+  resize: vertical;
+}
+
+#qp-panel-overlay .qp-modal input:focus,
+#qp-panel-overlay .qp-modal textarea:focus,
+#qp-panel-overlay .qp-modal select:focus {
+  border-color: #4a90d9;
+}
+
+#qp-panel-overlay .qp-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+#qp-panel-overlay .qp-btn {
+  padding: 5px 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+#qp-panel-overlay .qp-btn-primary { background: #4a90d9; color: #fff; }
+#qp-panel-overlay .qp-btn-primary:hover { background: #3a7bc8; }
+#qp-panel-overlay .qp-btn-cancel { background: #f0f0f0; color: #666; }
+#qp-panel-overlay .qp-btn-cancel:hover { background: #e0e0e0; }
+#qp-panel-overlay .qp-btn-danger { background: #ff4d4f; color: #fff; }
+#qp-panel-overlay .qp-btn-danger:hover { background: #e04042; }
+
+/* 空状态 */
+#qp-panel-overlay .qp-empty {
+  text-align: center;
+  padding: 36px 16px;
+  color: #999;
+}
+
+#qp-panel-overlay .qp-empty .qp-emoji {
+  font-size: 32px;
+  margin-bottom: 6px;
+}
+
+/* 标签管理 */
+#qp-panel-overlay .qp-tag-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 5px 0;
+  padding: 5px 7px;
+  background: #f7f8fa;
+  border-radius: 6px;
+}
+
+#qp-panel-overlay .qp-tag-preview {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  min-width: 46px;
+  text-align: center;
+}
+
+#qp-panel-overlay .qp-tag-item input[type="color"] {
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#qp-panel-overlay .qp-add-tag-row {
+  display: flex;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+#qp-panel-overlay .qp-add-tag-row input[type="text"] {
+  flex: 1;
+  padding: 5px 8px;
+  font-size: 12px;
+}
+
+#qp-panel-overlay .qp-add-tag-row input[type="color"] {
+  width: 30px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+}
