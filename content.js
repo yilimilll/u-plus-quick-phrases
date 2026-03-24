@@ -68,9 +68,28 @@
     }
   }
 
+  // 记录最后一次获得焦点的 contenteditable 元素（不依赖 selection）
+  let lastFocusedEditable = null;
+
+  function trackFocusedEditable(e) {
+    if (e.target.closest && e.target.closest('#qp-panel-overlay')) return;
+    const el = e.target;
+    if (el && el.nodeType === 1) {
+      const editable = el.closest ? el.closest('[contenteditable="true"]') : null;
+      if (editable && !editable.closest('#qp-panel-overlay')) {
+        lastFocusedEditable = editable;
+      }
+    }
+  }
+
   document.addEventListener('mouseup', trackSelection, true);
   document.addEventListener('keyup', trackSelection, true);
-  document.addEventListener('focusin', trackSelection, true);
+  document.addEventListener('focusin', (e) => { trackSelection(e); trackFocusedEditable(e); }, true);
+  document.addEventListener('mousedown', trackFocusedEditable, true);
+  // selectionchange 更精确地追踪光标
+  document.addEventListener('selectionchange', () => {
+    trackSelection({ target: document.activeElement || document.body });
+  });
 
   // ========== 存储 ==========
   function loadData() {
@@ -140,14 +159,44 @@
   }
 
   // ========== 插入逻辑 ==========
+
+  // 恢复焦点和光标到目标编辑区
+  function restoreFocus(element, range) {
+    element.focus();
+    const sel = window.getSelection();
+    if (range) {
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    if (!range || sel.rangeCount === 0) {
+      const r = document.createRange();
+      r.selectNodeContents(element);
+      r.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
+  }
+
   function insertPhrase(text) {
     const richHTML = buildRichHTML(text);
     const hasColor = richHTML !== esc(text);
 
-    // 优先恢复 input/textarea
+    // 始终写入剪贴板（ProseMirror 的保底 + 非编辑区的兜底）
+    try {
+      if (hasColor) {
+        navigator.clipboard.write([new ClipboardItem({
+          'text/html': new Blob([richHTML], { type: 'text/html' }),
+          'text/plain': new Blob([text], { type: 'text/plain' })
+        })]);
+      } else {
+        navigator.clipboard.writeText(text);
+      }
+    } catch (e) { /* ignore */ }
+
+    // input/textarea
     if (savedInput) {
       const { element: el, start, end } = savedInput;
-      if (document.contains(el)) {
+      if (document.contains(el) && el.offsetWidth > 0) {
         try {
           el.focus();
           el.selectionStart = start;
@@ -162,67 +211,74 @@
       }
     }
 
-    // contenteditable 富文本
-    if (savedRange) {
-      const { range, element } = savedRange;
-      if (document.contains(element)) {
-        try {
-          element.focus();
-          const sel = window.getSelection();
-          sel.removeAllRanges();
-          sel.addRange(range);
+    // contenteditable — 确定目标
+    let targetElement = null;
+    let targetRange = null;
 
-          if (hasColor) {
-            if (document.execCommand('insertHTML', false, richHTML)) {
-              trackSelection({ target: element });
-              showToast('✅ 已插入');
-              return;
-            }
-            // fallback 手动插入
-            range.deleteContents();
-            const tmp = document.createElement('div');
-            tmp.innerHTML = richHTML;
-            const frag = document.createDocumentFragment();
-            let lastNode;
-            while (tmp.firstChild) { lastNode = tmp.firstChild; frag.appendChild(lastNode); }
-            range.insertNode(frag);
-            if (lastNode) { range.setStartAfter(lastNode); range.setEndAfter(lastNode); }
-            sel.removeAllRanges();
-            sel.addRange(range);
-            element.dispatchEvent(new Event('input', { bubbles: true }));
-          } else {
-            if (document.execCommand('insertText', false, text)) {
-              trackSelection({ target: element });
-              showToast('✅ 已插入');
-              return;
-            }
-            range.deleteContents();
-            const tn = document.createTextNode(text);
-            range.insertNode(tn);
-            range.setStartAfter(tn);
-            range.setEndAfter(tn);
-            sel.removeAllRanges();
-            sel.addRange(range);
-            element.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-          trackSelection({ target: element });
-          showToast('✅ 已插入');
-          return;
-        } catch (e) { /* 继续 */ }
-      }
+    if (savedRange && document.contains(savedRange.element) && savedRange.element.offsetWidth > 0) {
+      targetElement = savedRange.element;
+      targetRange = savedRange.range;
+    } else if (lastFocusedEditable && document.contains(lastFocusedEditable) && lastFocusedEditable.offsetWidth > 0) {
+      targetElement = lastFocusedEditable;
+      targetRange = null;
     }
 
-    // 全都不行 → 复制到剪贴板
-    try {
-      if (hasColor) {
-        navigator.clipboard.write([new ClipboardItem({
-          'text/html': new Blob([richHTML], { type: 'text/html' }),
-          'text/plain': new Blob([text], { type: 'text/plain' })
-        })]);
+    if (targetElement) {
+      restoreFocus(targetElement, targetRange);
+
+      // 检测是否是 ProseMirror
+      const isProseMirror = targetElement.classList.contains('ProseMirror')
+        || !!targetElement.closest('.prosemirror-wrapper')
+        || !!targetElement.closest('.ProseMirror');
+
+      if (isProseMirror) {
+        // ProseMirror: 用模拟 paste 事件插入富文本 HTML
+        if (hasColor) {
+          const dt = new DataTransfer();
+          dt.setData('text/plain', text);
+          dt.setData('text/html', richHTML);
+          const pasteEvent = new ClipboardEvent('paste', {
+            bubbles: true,
+            cancelable: true,
+            clipboardData: dt
+          });
+          const consumed = !targetElement.dispatchEvent(pasteEvent);
+          // ProseMirror 会 preventDefault 这个事件，consumed=true 说明它处理了
+          if (consumed) {
+            trackSelection({ target: targetElement });
+            showToast('✅ 已插入');
+            return;
+          }
+        }
+        // 无颜色或 paste 失败，用 insertText
+        const inserted = document.execCommand('insertText', false, text);
+        if (inserted) {
+          trackSelection({ target: targetElement });
+          showToast('✅ 已插入');
+          return;
+        }
       } else {
-        navigator.clipboard.writeText(text);
+        // 普通 contenteditable：优先用 insertHTML 保留颜色
+        if (hasColor) {
+          if (document.execCommand('insertHTML', false, richHTML)) {
+            trackSelection({ target: targetElement });
+            showToast('✅ 已插入');
+            return;
+          }
+        }
+        if (document.execCommand('insertText', false, text)) {
+          trackSelection({ target: targetElement });
+          showToast('✅ 已插入');
+          return;
+        }
       }
-    } catch (e) { /* ignore */ }
+
+      // execCommand 失败，提示用户 Ctrl+V
+      showToast('📋 已复制，请 Ctrl+V');
+      return;
+    }
+
+    // 没有可用编辑区
     showToast('📋 已复制，请 Ctrl+V');
   }
 
@@ -310,13 +366,24 @@
     `;
 
     // 阻止面板内的 mousedown 冒泡影响页面选区
-    // 但不阻止搜索框和模态框内的输入
+    // 同时阻止冒泡到 document，防止 U+ 弹出框检测到"外部点击"而自动关闭
     panel.addEventListener('mousedown', e => {
       // 允许面板内的 input/textarea/select 获取焦点
       const isFormEl = e.target.matches('input, textarea, select');
       if (!isFormEl) {
-        e.preventDefault(); // 关键：阻止面板窃取页面焦点
+        e.preventDefault(); // 阻止面板窃取页面焦点
       }
+      e.stopPropagation(); // 阻止冒泡，防止 U+ 弹出框关闭
+    });
+    // 同样拦截 pointerdown，因为很多框架用 pointerdown 检测外部点击
+    panel.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+    });
+    panel.addEventListener('mouseup', e => {
+      e.stopPropagation();
+    });
+    panel.addEventListener('click', e => {
+      e.stopPropagation();
     });
 
     document.body.appendChild(panel);
